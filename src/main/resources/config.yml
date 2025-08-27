@@ -2,23 +2,37 @@
 currentSeason: BLOOD
 lastChangeDate: "2025-01-01"
 
-# Enabled seasons (leave empty to allow all)
+# Localization settings
+messages:
+  season_change: "§6New season: §e{season}"
+  season_current: "§6Current season: §e{season}"
+
+# Season names (customizable)
 seasons:
+  names:
+    BLOOD: "Blood Season"
+    FAMINE: "Famine Season"
+    STORM: "Storm Season"
+    TENEBRE: "Darkness Season"
+    ILLUSION: "Illusion Season"
+    PARANOIA: "Paranoia Season"
   enabled:
     - BLOOD
-    - NOCTURNE
     - FAMINE
     - STORM
     - TENEBRE
+    - ILLUSION
+    - PARANOIA
 
 # Rotation configuration
 # mode: MINUTES or IN_GAME_TIME
 rotation:
-  mode: MINUTES
+  mode: IN_GAME_TIME
   # If mode=MINUTES, period in minutes between each change
   minutes: 1440
-  # If mode=IN_GAME_TIME, in-game time (ticks 0-23999) of the change (e.g., 0 = midnight)
-  inGameChangeTime: 0
+  # If mode=IN_GAME_TIME, in-game time (ticks) of the change:
+  # 0 = 6:00 AM, 6000 = 12:00 PM, 12000 = 6:00 PM, 18000 = 12:00 AM (midnight)
+  inGameChangeTime: 18000
   # internal, do not edit
   lastChangeEpochMillis: 0
 

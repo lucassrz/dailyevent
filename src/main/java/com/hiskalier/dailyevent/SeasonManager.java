@@ -1,22 +1,25 @@
-package com.lucas.dailyevent;
+package com.hiskalier.dailyevent;
 
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.entity.Player;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.Map;
+import java.util.HashMap;
 
 public class SeasonManager {
 
     private final DailyEventPlugin plugin;
     private Season currentSeason;
     private LocalDate lastChangeDate;
-    private boolean bloodMoonTonight;
     private final Random random;
     private BukkitTask schedulerTask;
+    private LocalizationManager localizationManager;
 
     public enum RotationMode { MINUTES, IN_GAME_TIME }
 
@@ -31,25 +34,16 @@ public class SeasonManager {
         this.currentSeason = Season.BLOOD;
         this.lastChangeDate = LocalDate.now();
         this.random = new Random();
-        this.bloodMoonTonight = false;
-        this.rotationMode = RotationMode.MINUTES;
+        this.rotationMode = RotationMode.IN_GAME_TIME; // Default to in-game time
         this.rotationMinutes = 24L * 60L; // default 1 day
-        this.inGameChangeTimeTicks = 0L; // midnight
+        this.inGameChangeTimeTicks = 18000L; // default to midnight (12:00 AM)
         this.lastChangeEpochMillis = System.currentTimeMillis();
         this.enabledSeasons = new ArrayList<>();
+        this.localizationManager = plugin.getLocalizationManager();
     }
 
     public Season getCurrentSeason() {
         return currentSeason;
-    }
-
-    public boolean isBloodMoonTonight() {
-        return bloodMoonTonight;
-    }
-
-    public void setBloodMoonTonight(boolean bloodMoonTonight) {
-        this.bloodMoonTonight = bloodMoonTonight;
-        saveToConfig();
     }
 
     public void setSeason(Season season) {
@@ -60,9 +54,8 @@ public class SeasonManager {
 
     public void loadFromConfig() {
         FileConfiguration cfg = plugin.getConfig();
-        String seasonStr = cfg.getString("currentSeason", "HOSTILE");
+        String seasonStr = cfg.getString("currentSeason", "BLOOD");
         String dateStr = cfg.getString("lastChangeDate", LocalDate.now().toString());
-        boolean blood = cfg.getBoolean("bloodMoonTonight", false);
         String modeStr = cfg.getString("rotation.mode", "MINUTES");
         long minutes = cfg.getLong("rotation.minutes", 24L * 60L);
         long tickTime = cfg.getLong("rotation.inGameChangeTime", 0L);
@@ -82,7 +75,6 @@ public class SeasonManager {
 
         this.currentSeason = Season.fromString(seasonStr, Season.BLOOD);
         this.lastChangeDate = LocalDate.parse(dateStr);
-        this.bloodMoonTonight = blood;
         this.rotationMode = "IN_GAME_TIME".equalsIgnoreCase(modeStr) ? RotationMode.IN_GAME_TIME : RotationMode.MINUTES;
         this.rotationMinutes = Math.max(1L, minutes);
         this.inGameChangeTimeTicks = Math.max(0L, Math.min(23999L, tickTime));
@@ -94,10 +86,17 @@ public class SeasonManager {
         FileConfiguration cfg = plugin.getConfig();
         cfg.set("currentSeason", this.currentSeason.name());
         cfg.set("lastChangeDate", this.lastChangeDate.toString());
-        cfg.set("bloodMoonTonight", this.bloodMoonTonight);
         cfg.set("rotation.mode", this.rotationMode.name());
         cfg.set("rotation.minutes", this.rotationMinutes);
         cfg.set("rotation.inGameChangeTime", this.inGameChangeTimeTicks);
+        cfg.set("rotation.lastChangeEpochMillis", this.lastChangeEpochMillis);
+        plugin.saveConfig();
+    }
+    
+    public void saveCurrentSeasonOnly() {
+        FileConfiguration cfg = plugin.getConfig();
+        cfg.set("currentSeason", this.currentSeason.name());
+        cfg.set("lastChangeDate", this.lastChangeDate.toString());
         cfg.set("rotation.lastChangeEpochMillis", this.lastChangeEpochMillis);
         plugin.saveConfig();
     }
@@ -121,22 +120,47 @@ public class SeasonManager {
                 if (Bukkit.getWorlds().isEmpty()) return;
                 long time = Bukkit.getWorlds().get(0).getTime();
                 LocalDate today = LocalDate.now();
-                boolean inWindow = isWithinWindow(time, inGameChangeTimeTicks, 120L);
+                
+                // Check if we're at the target time (with a small window)
+                boolean inWindow = isWithinWindow(time, inGameChangeTimeTicks, 100L);
                 if (inWindow && !today.equals(lastChangeDate)) {
                     performSeasonChange();
                     lastChangeDate = today;
                     lastChangeEpochMillis = System.currentTimeMillis();
-                    saveToConfig();
+                    // Only save the current season, not the entire config
+                    saveCurrentSeasonOnly();
                 }
             }
-        }, 20L, 20L * 30L); // check every 30 seconds
+        }, 20L, 20L * 10L); // check every 10 seconds for more precision
     }
 
     private boolean isWithinWindow(long current, long target, long window) {
-        if (current >= target && current <= target + window) return true;
-        // wrap-around case near 24000
-        long targetMinus = (target - window + 24000L) % 24000L;
-        if (current >= targetMinus && current <= target) return true;
+        // Handle the case where we're near the target time
+        // Minecraft time: 0 = 6:00 AM, 6000 = 12:00 PM, 12000 = 6:00 PM, 18000 = 12:00 AM
+        
+        // Check if current time is within the window around target time
+        if (current >= target - window && current <= target + window) {
+            return true;
+        }
+        
+        // Handle wrap-around case (when target is near 0 and current is near 24000)
+        if (target < window) {
+            // Target is early in the day, check if current is late in the previous day
+            long wrapAroundStart = 24000 - window + target;
+            if (current >= wrapAroundStart) {
+                return true;
+            }
+        }
+        
+        // Handle wrap-around case (when target is near 24000 and current is near 0)
+        if (target > 24000 - window) {
+            // Target is late in the day, check if current is early in the next day
+            long wrapAroundEnd = target - 24000 + window;
+            if (current <= wrapAroundEnd) {
+                return true;
+            }
+        }
+        
         return false;
     }
 
@@ -159,12 +183,30 @@ public class SeasonManager {
     private void performSeasonChange() {
         rotateSeason();
         lastChangeDate = LocalDate.now();
-        bloodMoonTonight = false;
-        if (currentSeason == Season.NOCTURNE) {
-            // Blood Moon n'est plus une chance, c'est maintenant une saison à part entière
-        bloodMoonTonight = false;
+        
+        // Message dans la title bar pour tous les joueurs
+        String seasonName = localizationManager.getSeasonName(currentSeason);
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("season", seasonName);
+        String message = localizationManager.getMessage("season_change", placeholders);
+        
+        // Envoyer le message dans la title bar
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            sendTitleBar(player, message);
         }
-        Bukkit.broadcastMessage("§6[DailyEvent] Nouvelle saison: §e" + currentSeason + (bloodMoonTonight ? " §c(Blood Moon possible)" : ""));
+        
+        // Message dans le chat aussi
+        Bukkit.broadcastMessage(message);
+    }
+    
+    private void sendTitleBar(Player player, String message) {
+        try {
+            // Utiliser l'API Bukkit pour la title bar (plus compatible)
+            player.sendTitle(message, "", 10, 40, 10);
+        } catch (Exception e) {
+            // Fallback vers le chat si la title bar échoue
+            player.sendMessage(message);
+        }
     }
 }
 

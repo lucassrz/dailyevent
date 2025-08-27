@@ -1,11 +1,12 @@
-package com.lucas.dailyevent;
+package com.hiskalier.dailyevent;
 
 public enum Season {
     BLOOD,
-    NOCTURNE,
     FAMINE,
     STORM,
-    TENEBRE;
+    TENEBRE,
+    ILLUSION,
+    PARANOIA;
 
     public static Season fromString(String value, Season fallback) {
         if (value == null) return fallback;

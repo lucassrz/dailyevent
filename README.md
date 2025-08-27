@@ -1,79 +1,146 @@
 # DailyEvent Plugin
 
-Un plugin Minecraft qui change automatiquement les saisons du serveur avec des effets uniques.
+A Minecraft plugin that automatically changes server seasons with unique effects.
 
-## Saisons Disponibles
+## 🌟 New Features
 
-### 🌙 **BLOOD** (Saison du Sang)
-- **Mobs spawnent en masse** avec un buff de +30% vie et dégâts
-- **Loots des mobs augmentés** (x1.5) - 50% de chance de doubler les drops
-- **Tous les mobs neutres sont agressifs** :
-  - Endermen : Effet de force permanent
-  - Pigmen Zombie : En colère
-  - Loups : En colère
+- **🎯 Title Bar Messages** : Display season changes directly in the interface
+- **🌍 Localization System** : Fully configurable messages and season names
+- **⚙️ Advanced Configuration** : Complete text customization
 
-### 🌃 **NOCTURNE** (Saison de la Nuit)
-- **Nuits plus longues** (le temps reste bloqué la nuit)
-- **Blood Moon possible** (15% de chance) :
-  - Mobs avec effet de force et vitesse
-  - Ambiance plus hostile
+## Available Seasons
 
-### 🍽️ **FAMINE** (Saison de la Famine)
-- **Nourriture nourrit 50% moins** qu'en temps normal
-- **Saturation baisse plus vite** (70% de la normale)
-- **Bonus farming** : 30% de chance que les minerais donnent 2 drops
+### 🌙 **BLOOD** (Blood Season)
+- **Mobs spawn in mass** with +30% health and damage buff
+- **Increased mob loots** (x1.5) - 50% chance to double drops
+- **All neutral mobs become aggressive** :
+  - Endermen : Permanent strength effect
+  - Zombie Pigmen : Angry
+  - Wolves : Angry
 
-### ⛈️ **STORM** (Saison des Tempêtes)
-- **Orage et pluie permanents** sur tous les mondes
-- **Creepers chargés plus fréquents** (30% de chance)
-- **Squelettes sur chevaux** plus fréquents (20% de chance)
-- **Poissons et loots marins boostés** (plus de tridents)
+### 🍽️ **FAMINE** (Famine Season)
+- **Food nourishes 50% less** than normal
+- **Saturation decreases faster** (70% of normal)
+- **Farming bonus** : 30% chance that ores give 2 drops
 
-### 🌑 **TENEBRE** (Saison des Ténèbres)
-- **Nuit ultra sombre** avec effet de cécité léger
-- **Torches éclairent moins** (effet visuel)
-- **Spawn dans les spawners x2** (50% de chance de double spawn)
+### ⛈️ **STORM** (Storm Season)
+- **Permanent storm and rain** on all worlds
+- **More charged creepers** (30% chance)
+- **More skeletons on horses** (20% chance)
+- **Boosted fish and marine loots** (more tridents)
+
+### 🌑 **TENEBRE** (Darkness Season)
+- **Ultra dark night** with light blindness effect
+- **Torches light less** (visual effect)
+- **Spawner spawn x2** (50% chance of double spawn)
+
+### 🎭 **ILLUSION** (Illusion Season)
+- **Fake ores appear in caves** when a player is nearby (they drop nothing)
+- **Random pushing sensation** at random moments
+- **Bonus** : Real ores double their drops
+
+### 😱 **PARANOIA** (Paranoia Season)
+- **Mining ores shows 64 items** in inventory for a second before being corrected
+- **Fake players (Herobrine NPCs)** appear randomly near players for 0.25 seconds with stressful in-game sounds
+- **Bonus** : All players have double jump
 
 ## Configuration
 
-Le plugin se configure automatiquement via `config.yml` :
+The plugin configures automatically via `config.yml` :
 
 ```yaml
-# Saison actuelle
+# Current season
 currentSeason: BLOOD
 
-# Saisons activées
+# Customizable messages
+messages:
+  season_change: "§6New season: §e{season}"
+  season_current: "§6Current season: §e{season}"
+
+# Customizable season names
 seasons:
+  names:
+    BLOOD: "Blood Season"
+    FAMINE: "Famine Season"
+    STORM: "Storm Season"
+    TENEBRE: "Darkness Season"
+    ILLUSION: "Illusion Season"
+    PARANOIA: "Paranoia Season"
   enabled:
     - BLOOD
-    - NOCTURNE
     - FAMINE
     - STORM
     - TENEBRE
+    - ILLUSION
+    - PARANOIA
 
-# Rotation des saisons
+# Season rotation
 rotation:
-  mode: MINUTES
-  minutes: 1440  # 24 heures
+  mode: MINUTES  # MINUTES or IN_GAME_TIME
+  minutes: 1440  # 24 hours (if mode=MINUTES)
+  # If mode=IN_GAME_TIME, change time in ticks:
+  # 0 = 6:00 AM, 6000 = 12:00 PM, 12000 = 6:00 PM, 18000 = 12:00 AM (midnight)
+  inGameChangeTime: 18000
 ```
 
 ## Installation
 
-1. Placez le fichier `dailyevent-1.0.0.jar` dans le dossier `plugins/`
-2. Redémarrez votre serveur
-3. Le plugin se configurera automatiquement
+1. Place the `dailyevent-1.0.0.jar` file in the `plugins/` folder
+2. Restart your server
+3. The plugin will configure automatically
 
-## Commandes
+## Commands
 
-- `/season` - Affiche la saison actuelle
-- `/season <saison>` - Change manuellement la saison
+- **`/season`** - Shows current season
+- **`/season set <season>`** - Manually changes season
+- **`/season reload`** - Reloads localization configuration
 
-## Compatibilité
+## Advanced Features
+
+### 🎯 Title Bar Messages
+- **Automatic change** : Display of new season name in title bar
+- **Configurable duration** : 10 seconds display with fade in/out
+- **Secure fallback** : Fallback to chat if title bar fails
+
+### 🌍 Configurable Localization System
+- **Customizable messages** : Format notifications as you want
+- **Season names** : Customize season names
+- **Placeholders** : `{season}` variables in messages
+- **Dynamic reloading** : `/season reload` to apply changes
+
+### ⚙️ Flexible Configuration
+- **Custom language** : Configure your own messages and names
+- **Free formatting** : Use Minecraft color codes and formatting
+- **Hot reloading** : Modify config without restarting server
+
+## Language Customization
+
+To customize the language, simply modify the `config.yml` file :
+
+```yaml
+# French example
+messages:
+  season_change: "§6Nouvelle saison: §e{season}"
+  season_current: "§6Saison actuelle: §e{season}"
+
+seasons:
+  names:
+    BLOOD: "Saison du Sang"
+    FAMINE: "Saison de la Famine"
+    STORM: "Saison des Tempêtes"
+    TENEBRE: "Saison des Ténèbres"
+    ILLUSION: "Saison des Illusions"
+    PARANOIA: "Saison de la Paranoïa"
+```
+
+After modification, use `/season reload` to apply changes.
+
+## Compatibility
 
 - **Minecraft** : 1.17+
-- **Spigot/Paper** : Oui
-- **Bukkit** : Oui
+- **Spigot/Paper** : Yes
+- **Bukkit** : Yes
 
 ## Support
 
-Pour toute question ou problème, contactez le développeur.
+For any questions or issues, contact the developer.

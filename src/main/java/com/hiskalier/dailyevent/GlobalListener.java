@@ -1,4 +1,4 @@
-package com.lucas.dailyevent;
+package com.hiskalier.dailyevent;
 
 import org.bukkit.GameRule;
 import org.bukkit.Material;
@@ -17,6 +17,7 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -59,23 +60,7 @@ public class GlobalListener implements Listener {
             }
         }
 
-        // Nocturne: extra spawns at night and possible blood moon buffs
-        if (seasonManager.getCurrentSeason() == Season.NOCTURNE) {
-            World world = event.getLocation().getWorld();
-            if (world != null) {
-                long time = world.getTime();
-                boolean isNight = time >= 13000 && time <= 23000;
-                if (isNight) {
-                    if (seasonManager.isBloodMoonTonight()) {
-                        if (event.getEntity() instanceof LivingEntity) {
-                            LivingEntity le = (LivingEntity) event.getEntity();
-                            le.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 20 * 60 * 10, 1));
-                            le.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 60 * 10, 0));
-                        }
-                    }
-                }
-            }
-        }
+
 
         // Storm: plus de creepers chargés et squelettes sur chevaux
         if (seasonManager.getCurrentSeason() == Season.STORM) {
@@ -114,29 +99,7 @@ public class GlobalListener implements Listener {
         Player player = event.getPlayer();
         World world = player.getWorld();
         
-        // Nocturne: longer nights
-        if (seasonManager.getCurrentSeason() == Season.NOCTURNE) {
-            long time = world.getTime();
-            if (time >= 13000 && time <= 23000) {
-                world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        if (seasonManager.getCurrentSeason() != Season.NOCTURNE) {
-                            world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, true);
-                            cancel();
-                            return;
-                        }
-                        long t = world.getTime();
-                        if (t < 23000) {
-                            world.setTime(t + 5);
-                        }
-                    }
-                }.runTaskTimer(DailyEventPlugin.getInstance(), 20L, 20L);
-            } else {
-                world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, true);
-            }
-        }
+
         
         // Storm: orage/pluie permanent
         if (seasonManager.getCurrentSeason() == Season.STORM) {
@@ -203,11 +166,16 @@ public class GlobalListener implements Listener {
     public void onEntityDeath(EntityDeathEvent event) {
         if (seasonManager.getCurrentSeason() == Season.BLOOD) {
             List<ItemStack> drops = event.getDrops();
+            List<ItemStack> additionalDrops = new ArrayList<>();
+            
             for (ItemStack drop : drops) {
                 if (random.nextDouble() < 0.5) { // 50% chance de doubler
-                    drops.add(drop.clone());
+                    additionalDrops.add(drop.clone());
                 }
             }
+            
+            // Ajouter tous les drops supplémentaires d'un coup
+            drops.addAll(additionalDrops);
         }
     }
 }
