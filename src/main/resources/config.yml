@@ -1,0 +1,25 @@
+# Current season and last change date
+currentSeason: BLOOD
+lastChangeDate: "2025-01-01"
+
+# Enabled seasons (leave empty to allow all)
+seasons:
+  enabled:
+    - BLOOD
+    - NOCTURNE
+    - FAMINE
+    - STORM
+    - TENEBRE
+
+# Rotation configuration
+# mode: MINUTES or IN_GAME_TIME
+rotation:
+  mode: MINUTES
+  # If mode=MINUTES, period in minutes between each change
+  minutes: 1440
+  # If mode=IN_GAME_TIME, in-game time (ticks 0-23999) of the change (e.g., 0 = midnight)
+  inGameChangeTime: 0
+  # internal, do not edit
+  lastChangeEpochMillis: 0
+
+
