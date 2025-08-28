@@ -10,5 +10,3 @@ commands:
 permissions:
   dailyevent.admin:
     default: op
-
-

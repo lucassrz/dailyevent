@@ -25,5 +25,3 @@ seasons:
 # Season change time (in-game ticks)
 # 0 = 6:00 AM, 6000 = 12:00 PM, 12000 = 6:00 PM, 18000 = 12:00 AM (midnight)
 inGameChangeTime: 18000
-
-
