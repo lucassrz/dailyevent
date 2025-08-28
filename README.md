@@ -83,12 +83,6 @@ rotation:
   inGameChangeTime: 18000
 ```
 
-## Installation
-
-1. Place the `dailyevent-1.0.0.jar` file in the `plugins/` folder
-2. Restart your server
-3. The plugin will configure automatically
-
 ## Commands
 
 - **`/season`** - Shows current season
@@ -115,32 +109,10 @@ rotation:
 
 ## Language Customization
 
-To customize the language, simply modify the `config.yml` file :
-
-```yaml
-# French example
-messages:
-  season_change: "§6Nouvelle saison: §e{season}"
-  season_current: "§6Saison actuelle: §e{season}"
-
-seasons:
-  names:
-    BLOOD: "Saison du Sang"
-    FAMINE: "Saison de la Famine"
-    STORM: "Saison des Tempêtes"
-    TENEBRE: "Saison des Ténèbres"
-    ILLUSION: "Saison des Illusions"
-    PARANOIA: "Saison de la Paranoïa"
-```
+To customize the language, simply modify the `config.yml` file.
 
 After modification, use `/season reload` to apply changes.
 
-## Compatibility
-
-- **Minecraft** : 1.17+
-- **Spigot/Paper** : Yes
-- **Bukkit** : Yes
-
 ## Support
 
-For any questions or issues, contact the developer.
+For any questions or issues, contact me.

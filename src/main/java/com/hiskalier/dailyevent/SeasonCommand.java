@@ -46,7 +46,7 @@ public class SeasonCommand implements CommandExecutor {
 
         if (args[0].equalsIgnoreCase("reload")) {
             localizationManager.reloadLocalization();
-            sender.sendMessage("§aLocalization reloaded!");
+            sender.sendMessage("§aConfiguration reloaded!");
             return true;
         }
 
