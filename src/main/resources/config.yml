@@ -1,6 +1,4 @@
-# Current season and last change date
-currentSeason: BLOOD
-lastChangeDate: "2025-01-01"
+# DailyEvent Plugin Configuration
 
 # Localization settings
 messages:
@@ -24,16 +22,8 @@ seasons:
     - ILLUSION
     - PARANOIA
 
-# Rotation configuration
-# mode: MINUTES or IN_GAME_TIME
-rotation:
-  mode: IN_GAME_TIME
-  # If mode=MINUTES, period in minutes between each change
-  minutes: 1440
-  # If mode=IN_GAME_TIME, in-game time (ticks) of the change:
-  # 0 = 6:00 AM, 6000 = 12:00 PM, 12000 = 6:00 PM, 18000 = 12:00 AM (midnight)
-  inGameChangeTime: 18000
-  # internal, do not edit
-  lastChangeEpochMillis: 0
+# Season change time (in-game ticks)
+# 0 = 6:00 AM, 6000 = 12:00 PM, 12000 = 6:00 PM, 18000 = 12:00 AM (midnight)
+inGameChangeTime: 18000
 
 

@@ -5,7 +5,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.entity.Player;
 
-import java.time.LocalDate;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -16,30 +16,24 @@ public class SeasonManager {
 
     private final DailyEventPlugin plugin;
     private Season currentSeason;
-    private LocalDate lastChangeDate;
     private final Random random;
     private BukkitTask schedulerTask;
     private LocalizationManager localizationManager;
 
-    public enum RotationMode { MINUTES, IN_GAME_TIME }
-
-    private RotationMode rotationMode;
-    private long rotationMinutes;
     private long inGameChangeTimeTicks; // 0..23999
-    private long lastChangeEpochMillis;
+    private long lastCheckedTime; // Track last checked time to detect crossing
+
     private List<Season> enabledSeasons;
 
     public SeasonManager(DailyEventPlugin plugin) {
         this.plugin = plugin;
-        this.currentSeason = Season.BLOOD;
-        this.lastChangeDate = LocalDate.now();
         this.random = new Random();
-        this.rotationMode = RotationMode.IN_GAME_TIME; // Default to in-game time
-        this.rotationMinutes = 24L * 60L; // default 1 day
+        // Seasons always change at precise in-game time
         this.inGameChangeTimeTicks = 18000L; // default to midnight (12:00 AM)
-        this.lastChangeEpochMillis = System.currentTimeMillis();
+        this.lastCheckedTime = 0L; // Initialize last checked time
         this.enabledSeasons = new ArrayList<>();
         this.localizationManager = plugin.getLocalizationManager();
+        // Season will be set randomly in loadFromConfig()
     }
 
     public Season getCurrentSeason() {
@@ -48,19 +42,14 @@ public class SeasonManager {
 
     public void setSeason(Season season) {
         this.currentSeason = season;
-        saveToConfig();
+        // No automatic saving - seasons change in memory only
         Bukkit.getLogger().info("[DailyEvent] Season set to " + season);
     }
 
     public void loadFromConfig() {
         FileConfiguration cfg = plugin.getConfig();
-        String seasonStr = cfg.getString("currentSeason", "BLOOD");
-        String dateStr = cfg.getString("lastChangeDate", LocalDate.now().toString());
-        String modeStr = cfg.getString("rotation.mode", "MINUTES");
-        long minutes = cfg.getLong("rotation.minutes", 24L * 60L);
-        long tickTime = cfg.getLong("rotation.inGameChangeTime", 0L);
-        long lastMs = cfg.getLong("rotation.lastChangeEpochMillis", System.currentTimeMillis());
-
+        
+        // Load only the enabled seasons list from config
         List<String> enabled = cfg.getStringList("seasons.enabled");
         List<Season> parsed = new ArrayList<>();
         if (enabled != null && !enabled.isEmpty()) {
@@ -72,34 +61,29 @@ public class SeasonManager {
         if (parsed.isEmpty()) {
             for (Season s : Season.values()) parsed.add(s);
         }
-
-        this.currentSeason = Season.fromString(seasonStr, Season.BLOOD);
-        this.lastChangeDate = LocalDate.parse(dateStr);
-        this.rotationMode = "IN_GAME_TIME".equalsIgnoreCase(modeStr) ? RotationMode.IN_GAME_TIME : RotationMode.MINUTES;
-        this.rotationMinutes = Math.max(1L, minutes);
-        this.inGameChangeTimeTicks = Math.max(0L, Math.min(23999L, tickTime));
-        this.lastChangeEpochMillis = lastMs;
+        
+        // Load the in-game time when seasons change
+        this.inGameChangeTimeTicks = cfg.getLong("inGameChangeTime", 18000L); // Default to midnight
+        
+        // Initialize last checked time to current world time
+        if (!Bukkit.getWorlds().isEmpty()) {
+            this.lastCheckedTime = Bukkit.getWorlds().get(0).getTime();
+        } else {
+            this.lastCheckedTime = 0L;
+        }
+        
+        // Generate a random season at startup
+        if (!enabledSeasons.isEmpty()) {
+            this.currentSeason = enabledSeasons.get(random.nextInt(enabledSeasons.size()));
+        } else {
+            this.currentSeason = Season.BLOOD; // Fallback if no seasons enabled
+        }
         this.enabledSeasons = parsed;
     }
 
-    public void saveToConfig() {
-        FileConfiguration cfg = plugin.getConfig();
-        cfg.set("currentSeason", this.currentSeason.name());
-        cfg.set("lastChangeDate", this.lastChangeDate.toString());
-        cfg.set("rotation.mode", this.rotationMode.name());
-        cfg.set("rotation.minutes", this.rotationMinutes);
-        cfg.set("rotation.inGameChangeTime", this.inGameChangeTimeTicks);
-        cfg.set("rotation.lastChangeEpochMillis", this.lastChangeEpochMillis);
-        plugin.saveConfig();
-    }
+
     
-    public void saveCurrentSeasonOnly() {
-        FileConfiguration cfg = plugin.getConfig();
-        cfg.set("currentSeason", this.currentSeason.name());
-        cfg.set("lastChangeDate", this.lastChangeDate.toString());
-        cfg.set("rotation.lastChangeEpochMillis", this.lastChangeEpochMillis);
-        plugin.saveConfig();
-    }
+
 
     public void startDailyScheduler() {
         if (schedulerTask != null) {
@@ -107,62 +91,22 @@ public class SeasonManager {
         }
 
         schedulerTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (rotationMode == RotationMode.MINUTES) {
-                long nowMs = System.currentTimeMillis();
-                long periodMs = rotationMinutes * 60_000L;
-                if (nowMs - lastChangeEpochMillis >= periodMs) {
-                    performSeasonChange();
-                    lastChangeEpochMillis = nowMs;
-                    saveToConfig();
-                }
-            } else {
-                // IN_GAME_TIME: check primary world time
-                if (Bukkit.getWorlds().isEmpty()) return;
-                long time = Bukkit.getWorlds().get(0).getTime();
-                LocalDate today = LocalDate.now();
-                
-                // Check if we're at the target time (with a small window)
-                boolean inWindow = isWithinWindow(time, inGameChangeTimeTicks, 100L);
-                if (inWindow && !today.equals(lastChangeDate)) {
-                    performSeasonChange();
-                    lastChangeDate = today;
-                    lastChangeEpochMillis = System.currentTimeMillis();
-                    // Only save the current season, not the entire config
-                    saveCurrentSeasonOnly();
-                }
+            // Check primary world time for season change
+            if (Bukkit.getWorlds().isEmpty()) return;
+            long time = Bukkit.getWorlds().get(0).getTime();
+            
+            // Check if we've crossed the target time threshold
+            // This handles both forward and backward time changes
+            if (hasCrossedThreshold(lastCheckedTime, time, inGameChangeTimeTicks)) {
+                performSeasonChange();
             }
-        }, 20L, 20L * 10L); // check every 10 seconds for more precision
+            
+            // Update last checked time
+            lastCheckedTime = time;
+        }, 20L, 20L * 5L); // check every 5 seconds for maximum precision
     }
 
-    private boolean isWithinWindow(long current, long target, long window) {
-        // Handle the case where we're near the target time
-        // Minecraft time: 0 = 6:00 AM, 6000 = 12:00 PM, 12000 = 6:00 PM, 18000 = 12:00 AM
-        
-        // Check if current time is within the window around target time
-        if (current >= target - window && current <= target + window) {
-            return true;
-        }
-        
-        // Handle wrap-around case (when target is near 0 and current is near 24000)
-        if (target < window) {
-            // Target is early in the day, check if current is late in the previous day
-            long wrapAroundStart = 24000 - window + target;
-            if (current >= wrapAroundStart) {
-                return true;
-            }
-        }
-        
-        // Handle wrap-around case (when target is near 24000 and current is near 0)
-        if (target > 24000 - window) {
-            // Target is late in the day, check if current is early in the next day
-            long wrapAroundEnd = target - 24000 + window;
-            if (current <= wrapAroundEnd) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
+
 
     private void rotateSeason() {
         if (enabledSeasons == null || enabledSeasons.isEmpty()) {
@@ -182,7 +126,6 @@ public class SeasonManager {
 
     private void performSeasonChange() {
         rotateSeason();
-        lastChangeDate = LocalDate.now();
         
         // Message dans la title bar pour tous les joueurs
         String seasonName = localizationManager.getSeasonName(currentSeason);
@@ -197,6 +140,36 @@ public class SeasonManager {
         
         // Message dans le chat aussi
         Bukkit.broadcastMessage(message);
+    }
+    
+    /**
+     * Check if the time has crossed the threshold between two checks
+     * This handles both forward and backward time changes (like /time set)
+     */
+    private boolean hasCrossedThreshold(long previousTime, long currentTime, long threshold) {
+        // Handle normal forward progression
+        if (previousTime < threshold && currentTime >= threshold) {
+            return true;
+        }
+        
+        // Handle backward time changes (like /time set)
+        if (previousTime > threshold && currentTime <= threshold) {
+            return true;
+        }
+        
+        // Handle day wrap-around (when time goes from 23999 to 0)
+        if (previousTime > threshold && currentTime < threshold && 
+            Math.abs(previousTime - currentTime) > 1000) { // Significant jump
+            return true;
+        }
+        
+        // Handle reverse day wrap-around (when time goes from 0 to 23999)
+        if (previousTime < threshold && currentTime > threshold && 
+            Math.abs(previousTime - currentTime) > 1000) { // Significant jump
+            return true;
+        }
+        
+        return false;
     }
     
     private void sendTitleBar(Player player, String message) {
