@@ -49,15 +49,14 @@ A Minecraft plugin that automatically changes server seasons with unique effects
 The plugin configures automatically via `config.yml` :
 
 ```yaml
-# Current season
-currentSeason: BLOOD
+# DailyEvent Plugin Configuration
 
-# Customizable messages
+# Localization settings
 messages:
   season_change: "§6New season: §e{season}"
   season_current: "§6Current season: §e{season}"
 
-# Customizable season names
+# Season names (customizable)
 seasons:
   names:
     BLOOD: "Blood Season"
@@ -74,13 +73,9 @@ seasons:
     - ILLUSION
     - PARANOIA
 
-# Season rotation
-rotation:
-  mode: MINUTES  # MINUTES or IN_GAME_TIME
-  minutes: 1440  # 24 hours (if mode=MINUTES)
-  # If mode=IN_GAME_TIME, change time in ticks:
-  # 0 = 6:00 AM, 6000 = 12:00 PM, 12000 = 6:00 PM, 18000 = 12:00 AM (midnight)
-  inGameChangeTime: 18000
+# Season change time (in-game ticks)
+# 0 = 6:00 AM, 6000 = 12:00 PM, 12000 = 6:00 PM, 18000 = 12:00 AM (midnight)
+inGameChangeTime: 18000
 ```
 
 ## Commands
